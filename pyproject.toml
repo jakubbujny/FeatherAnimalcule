@@ -1,0 +1,14 @@
+[project]
+name = "featheranimalcule"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "circuitpython-stubs>=10.0.3",
+    "circup>=3.0.1",
+    "mpremote>=1.27.0",
+]

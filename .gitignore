@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+
+# CircuitPython Cache
+.cache/
+
+# Operating System
+.DS_Store
+Thumbs.db

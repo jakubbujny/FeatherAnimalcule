@@ -1,0 +1,1 @@
+https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/download/20260207/adafruit-circuitpython-bundle-py-20260207.zip
