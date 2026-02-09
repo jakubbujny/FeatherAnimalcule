@@ -1,7 +1,7 @@
 import time, gc, os
 import adafruit_dotstar
 import board
-import feathers2
+from default_files import feathers2
 
 # Make sure the 2nd LDO is turned on
 feathers2.enable_LDO2(True)

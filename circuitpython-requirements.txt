@@ -1,2 +1,3 @@
-adafruit_dotstar
 adafruit_bus_device
+adafruit_hx8357
+adafruit_tsc2007

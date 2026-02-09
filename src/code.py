@@ -1,25 +1,70 @@
-import time
+# SPDX-FileCopyrightText: 2023 Liz Clark for Adafruit Industries
+# SPDX-License-Identifier: MIT
+
+"""
+This test will initialize the display using displayio and display
+a bitmap image. The image advances when the touch screen is touched.
+
+Pinouts are for the 3.5" TFT FeatherWing V2
+"""
+import os
 import board
-import adafruit_dotstar
-import feathers2
+import displayio
+import fourwire
+import adafruit_hx8357
+import adafruit_tsc2007
 
-feathers2.enable_LDO2(True)
+# Release any resources currently in use for the displays
+displayio.release_displays()
 
-dotstar = adafruit_dotstar.DotStar(board.APA102_SCK, board.APA102_MOSI, 1, brightness=0.3, auto_write=True)
+# Use Hardware SPI
+spi = board.SPI()
 
-colors = [
-    (255, 0, 0),   # red
-    (0, 255, 0),   # green
-    (0, 0, 255),   # blue
-    (255, 255, 0), # yellow
-    (0, 255, 255), # cyan
-    (255, 0, 255), # magenta
-    (255, 255, 255), # white
-]
+tft_cs = board.D5
+tft_dc = board.D6
+
+display_width = 480
+display_height = 320
+
+display_bus = fourwire.FourWire(spi, command=tft_dc, chip_select=tft_cs)
+display = adafruit_hx8357.HX8357(display_bus, width=display_width, height=display_height)
+
+i2c = board.STEMMA_I2C()
+
+irq_dio = None
+tsc = adafruit_tsc2007.TSC2007(i2c, irq=irq_dio)
+
+groups = []
+images = []
+for filename in os.listdir('/'):
+    if filename.lower().endswith('.bmp') and not filename.startswith('.'):
+        images.append("/"+filename)
+print(images)
+
+for i in range(len(images)):
+    splash = displayio.Group()
+    bitmap = displayio.OnDiskBitmap(images[i])
+    tile_grid = displayio.TileGrid(bitmap, pixel_shader=bitmap.pixel_shader)
+    splash.append(tile_grid)
+    groups.append(splash)
+
+index = 0
+touch_state = False
+
+display.root_group = groups[index]
 
 while True:
-    for c in colors:
-        dotstar[0] = c
-        time.sleep(0.4)
-        dotstar[0] = (0, 0, 0)
-        time.sleep(0.2)
+    if tsc.touched and not touch_state:
+        point = tsc.touch
+        print("Touchpoint: (%d, %d, %d)" % (point["x"], point["y"], point["pressure"]))
+        # left side of the screen
+        if point["y"] < 2000:
+            index = (index - 1) % len(images)
+            display.root_group = groups[index]
+        # right side of the screen
+        else:
+            index = (index + 1) % len(images)
+            display.root_group = groups[index]
+        touch_state = True
+    if not tsc.touched and touch_state:
+        touch_state = False
