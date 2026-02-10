@@ -22,6 +22,7 @@ spi = board.SPI()
 
 tft_cs = board.D5
 tft_dc = board.D6
+sd_scs = board.D20
 
 display_width = 480
 display_height = 320
