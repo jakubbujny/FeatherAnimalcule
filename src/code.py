@@ -1,71 +1,28 @@
-# SPDX-FileCopyrightText: 2023 Liz Clark for Adafruit Industries
-# SPDX-License-Identifier: MIT
+import graphics.root_group_singleton
+import resources_singleton
 
-"""
-This test will initialize the display using displayio and display
-a bitmap image. The image advances when the touch screen is touched.
-
-Pinouts are for the 3.5" TFT FeatherWing V2
-"""
-import os
-import board
 import displayio
-import fourwire
-import adafruit_hx8357
-import adafruit_tsc2007
 
-# Release any resources currently in use for the displays
-displayio.release_displays()
+from constants import WORLD_WIDTH, WORLD_HEIGHT, HUD_WIDTH, HUD_HEIGHT
 
-# Use Hardware SPI
-spi = board.SPI()
+resources = resources_singleton.get_resources()
 
-tft_cs = board.D5
-tft_dc = board.D6
-sd_scs = board.D20
+display_root_group = graphics.root_group_singleton.get_root_group(resources.get_display())
 
-display_width = 480
-display_height = 320
+world_bmp = displayio.Bitmap(WORLD_WIDTH, WORLD_HEIGHT, 1)
+world_pal = displayio.Palette(1)
+world_pal[0] = 0x003060  # world background color
 
-display_bus = fourwire.FourWire(spi, command=tft_dc, chip_select=tft_cs)
-display = adafruit_hx8357.HX8357(display_bus, width=display_width, height=display_height)
+world_bg = displayio.TileGrid(world_bmp, pixel_shader=world_pal, x=0, y=0)
+display_root_group.append(world_bg)
 
-i2c = board.STEMMA_I2C()
+# --- HUD (right) solid background ---
+hud_bmp = displayio.Bitmap(HUD_WIDTH, HUD_HEIGHT, 1)
+hud_pal = displayio.Palette(1)
+hud_pal[0] = 0x303030  # hud background color
 
-irq_dio = None
-tsc = adafruit_tsc2007.TSC2007(i2c, irq=irq_dio)
-
-groups = []
-images = []
-for filename in os.listdir('/'):
-    if filename.lower().endswith('.bmp') and not filename.startswith('.'):
-        images.append("/"+filename)
-print(images)
-
-for i in range(len(images)):
-    splash = displayio.Group()
-    bitmap = displayio.OnDiskBitmap(images[i])
-    tile_grid = displayio.TileGrid(bitmap, pixel_shader=bitmap.pixel_shader)
-    splash.append(tile_grid)
-    groups.append(splash)
-
-index = 0
-touch_state = False
-
-display.root_group = groups[index]
+hud_bg = displayio.TileGrid(hud_bmp, pixel_shader=hud_pal, x=WORLD_WIDTH, y=0)
+display_root_group.append(hud_bg)
 
 while True:
-    if tsc.touched and not touch_state:
-        point = tsc.touch
-        print("Touchpoint: (%d, %d, %d)" % (point["x"], point["y"], point["pressure"]))
-        # left side of the screen
-        if point["y"] < 2000:
-            index = (index - 1) % len(images)
-            display.root_group = groups[index]
-        # right side of the screen
-        else:
-            index = (index + 1) % len(images)
-            display.root_group = groups[index]
-        touch_state = True
-    if not tsc.touched and touch_state:
-        touch_state = False
+    pass
