@@ -154,6 +154,8 @@ def rsync_code(src: Path, mount: Path) -> None:
     cmd = [
         "rsync", "-av", "--delete",
         "--exclude", "lib/***",          # circpython deps live on board lib/
+        "--exclude", "sd/***",           # keep SD mount-point directory on board
+        "--exclude", "sd",
         "--exclude", "__pycache__",
         "--exclude", "boot_out.txt",     # keep device-generated file
         "--exclude", ".DS_Store",
@@ -166,6 +168,23 @@ def rsync_code(src: Path, mount: Path) -> None:
         ]
     print("Syncing code:", " ".join(cmd))
     subprocess.run(cmd, check=True)
+
+
+def ensure_sd_mount_dir(mount: Path, mount_dir_name: str = "sd") -> Path:
+    """
+    Ensure the SD mount-point directory exists on the board filesystem.
+
+    CircuitPython requires the mount-point directory (e.g. '/sd') to exist
+    before calling storage.mount(..., '/sd').
+    """
+    p = mount / mount_dir_name
+    if p.is_dir():
+        return p
+    if p.exists():
+        raise RuntimeError(f"Expected SD mount-point to be a directory but found a file: {p}")
+    p.mkdir(parents=False, exist_ok=True)
+    print(f"Created SD mount-point directory: {p}")
+    return p
 
 
 def prepare_bundle(url: str) -> tuple[Path, Path]:
@@ -203,12 +222,18 @@ def main() -> int:
     print("\n👉 IntelliJ: add this folder as Library/Sources so imports resolve:")
     print(f"   {ide_lib}\n")
 
+    # Ensure SD mount-point directory exists (e.g. '/sd' on the board)
+    ensure_sd_mount_dir(mount, "sd")
+
     # Install requested libs onto the board from the DEVICE bundle
     for name in libs:
         copy_lib_item(device_lib, name, dest_lib)
 
     # Sync your code without touching lib/
     rsync_code(SRC_DIR, mount)
+
+    # Ensure SD mount-point directory exists *after* rsync (rsync --delete might otherwise remove it)
+    ensure_sd_mount_dir(mount, "sd")
 
     print("\nDone.")
     return 0

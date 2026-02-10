@@ -1,9 +1,11 @@
+import os
+
 import graphics.root_group_singleton
 import resources_singleton
 
 import displayio
 
-from constants import WORLD_WIDTH, WORLD_HEIGHT, HUD_WIDTH, HUD_HEIGHT
+from constants import WORLD_WIDTH, WORLD_HEIGHT, HUD_WIDTH, HUD_HEIGHT, SD_MOUNT_POINT
 
 resources = resources_singleton.get_resources()
 
@@ -23,6 +25,10 @@ hud_pal[0] = 0x303030  # hud background color
 
 hud_bg = displayio.TileGrid(hud_bmp, pixel_shader=hud_pal, x=WORLD_WIDTH, y=0)
 display_root_group.append(hud_bg)
+
+sd_card = resources.get_sd_card()
+for name in os.listdir(SD_MOUNT_POINT):
+    print(" -", name)
 
 while True:
     pass
