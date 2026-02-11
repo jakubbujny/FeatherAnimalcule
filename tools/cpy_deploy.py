@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import hashlib
 import os
 import shutil
@@ -201,39 +202,58 @@ def prepare_bundle(url: str) -> tuple[Path, Path]:
     return zip_path, lib_dir
 
 
-def main() -> int:
-    mount = detect_mountpoint()
-    libs = read_requirements(REQ_LIBS)
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Deploy CircuitPython code (and optionally libraries) to a mounted CIRCUITPY device.")
+    p.add_argument(
+        "--mount",
+        type=Path,
+        default=None,
+        help="CIRCUITPY mount path (overrides auto-detect and CPY_MOUNT env var).",
+    )
+    p.add_argument(
+        "--sync-lib",
+        action="store_true",
+        help="Also install libraries to /lib from the configured CircuitPython bundle.",
+    )
+    return p.parse_args(argv)
 
-    device_url = read_first_nonempty_line(REQ_BUNDLE_DEVICE)
-    ide_url = read_first_nonempty_line(REQ_BUNDLE_IDE)
 
-    # Prepare both bundles (cached download + cached extraction)
-    device_zip, device_lib = prepare_bundle(device_url)  # .mpy bundle used for install to board
-    ide_zip, ide_lib = prepare_bundle(ide_url)           # .py bundle used for IDE indexing
+def main(argv: Optional[list[str]] = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
 
-    dest_lib = mount / "lib"
-
+    mount = args.mount if args.mount is not None else detect_mountpoint()
     print(f"\nBoard mount:      {mount}")
-    print(f"Device bundle zip:{device_zip}")
-    print(f"Device bundle lib:{device_lib}")
-    print(f"IDE bundle zip:   {ide_zip}")
-    print(f"IDE bundle lib:   {ide_lib}")
-    print("\n👉 IntelliJ: add this folder as Library/Sources so imports resolve:")
-    print(f"   {ide_lib}\n")
 
     # Ensure SD mount-point directory exists (e.g. '/sd' on the board)
     ensure_sd_mount_dir(mount, "sd")
 
-    # Install requested libs onto the board from the DEVICE bundle
-    for name in libs:
-        copy_lib_item(device_lib, name, dest_lib)
-
-    # Sync your code without touching lib/
+    # Sync your code without touching lib/ (default behavior)
     rsync_code(SRC_DIR, mount)
 
     # Ensure SD mount-point directory exists *after* rsync (rsync --delete might otherwise remove it)
     ensure_sd_mount_dir(mount, "sd")
+
+    if args.sync_lib:
+        libs = read_requirements(REQ_LIBS)
+        device_url = read_first_nonempty_line(REQ_BUNDLE_DEVICE)
+        ide_url = read_first_nonempty_line(REQ_BUNDLE_IDE)
+
+        # Prepare both bundles (cached download + cached extraction)
+        device_zip, device_lib = prepare_bundle(device_url)  # .mpy bundle used for install to board
+        ide_zip, ide_lib = prepare_bundle(ide_url)           # .py bundle used for IDE indexing
+
+        dest_lib = mount / "lib"
+
+        print(f"\nDevice bundle zip:{device_zip}")
+        print(f"Device bundle lib:{device_lib}")
+        print(f"IDE bundle zip:   {ide_zip}")
+        print(f"IDE bundle lib:   {ide_lib}")
+        print("\n👉 IntelliJ: add this folder as Library/Sources so imports resolve:")
+        print(f"   {ide_lib}\n")
+
+        # Install requested libs onto the board from the DEVICE bundle
+        for name in libs:
+            copy_lib_item(device_lib, name, dest_lib)
 
     print("\nDone.")
     return 0

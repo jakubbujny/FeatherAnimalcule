@@ -11,4 +11,5 @@ dev = [
     "circuitpython-stubs>=10.0.3",
     "circup>=3.0.1",
     "mpremote>=1.27.0",
+    "pillow>=12.1.1",
 ]

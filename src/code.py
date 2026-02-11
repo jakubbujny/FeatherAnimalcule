@@ -1,34 +1,51 @@
 import os
+import time
 
+import constants
 import graphics.root_group_singleton
 import resources_singleton
+import adafruit_imageload
 
 import displayio
 
 from constants import WORLD_WIDTH, WORLD_HEIGHT, HUD_WIDTH, HUD_HEIGHT, SD_MOUNT_POINT
 
+BG_BMP = f"{SD_MOUNT_POINT}/background/phase1.bmp"
+FG_BMP = f"{SD_MOUNT_POINT}/foreground/phase1.bmp"
+
 resources = resources_singleton.get_resources()
+display = resources.get_display()
+display_root_group = graphics.root_group_singleton.get_root_group(display)
 
-display_root_group = graphics.root_group_singleton.get_root_group(resources.get_display())
+bg_bitmap, bg_palette = adafruit_imageload.load(
+    BG_BMP,
+    bitmap=displayio.Bitmap,
+    palette=displayio.Palette,
+)
+bg_tg = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
+display_root_group.append(bg_tg)
 
-world_bmp = displayio.Bitmap(WORLD_WIDTH, WORLD_HEIGHT, 1)
-world_pal = displayio.Palette(1)
-world_pal[0] = 0x003060  # world background color
+# --- Foreground image centered, with "green screen" made transparent ---
+fg_bitmap, fg_palette = adafruit_imageload.load(
+    FG_BMP,
+    bitmap=displayio.Bitmap,
+    palette=displayio.Palette,
+)
 
-world_bg = displayio.TileGrid(world_bmp, pixel_shader=world_pal, x=0, y=0)
-display_root_group.append(world_bg)
+# Treat pure green (0x00FF00) as transparent. Change this if your key color differs.
+GREEN_KEY = 0x00FF00
+for i in range(len(fg_palette)):
+    if fg_palette[i] == GREEN_KEY:
+        fg_palette.make_transparent(i)
+        break
 
-# --- HUD (right) solid background ---
-hud_bmp = displayio.Bitmap(HUD_WIDTH, HUD_HEIGHT, 1)
-hud_pal = displayio.Palette(1)
-hud_pal[0] = 0x303030  # hud background color
+fg_x = (display.width - fg_bitmap.width) // 2
+fg_y = (display.height - fg_bitmap.height) // 2 + 30
+fg_tg = displayio.TileGrid(fg_bitmap, pixel_shader=fg_palette, x=fg_x, y=fg_y)
 
-hud_bg = displayio.TileGrid(hud_bmp, pixel_shader=hud_pal, x=WORLD_WIDTH, y=0)
-display_root_group.append(hud_bg)
+# Append after background so it renders in the foreground
+display_root_group.append(fg_tg)
 
-sd_card = resources.get_sd_card()
-for name in os.listdir(SD_MOUNT_POINT):
-    print(" -", name)
 
 while True:
     pass
