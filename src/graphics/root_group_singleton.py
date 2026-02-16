@@ -1,6 +1,10 @@
 import displayio
 
 import adafruit_hx8357
+import adafruit_logging as logging
+
+log = logging.getLogger("rootgroup")
+log.setLevel(logging.DEBUG)
 
 _instance = None
 
@@ -10,9 +14,11 @@ class RootGroupSingleton:
         self.display = display
         self.root_group = displayio.Group()
         self.display.root_group = self.root_group
+        log.info("Root display group created")
 
     def append(self, group):
         self.root_group.append(group)
+        log.debug("Appended element to root group, count: %d", len(self.root_group))
 
 
 

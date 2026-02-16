@@ -1,51 +1,50 @@
-import os
+import json
 import time
+import wifi
+import socketpool
 
-import constants
+import adafruit_logging as logging
+
 import graphics.root_group_singleton
+from graphics.background_manager import BackgroundManager
+from graphics.dino_animator import DinoAnimator
+from kv_store import KVStore
 import resources_singleton
-import adafruit_imageload
 
-import displayio
+from constants import SD_MOUNT_POINT
 
-from constants import WORLD_WIDTH, WORLD_HEIGHT, HUD_WIDTH, HUD_HEIGHT, SD_MOUNT_POINT
+log = logging.getLogger("main")
+log.setLevel(logging.DEBUG)
 
-BG_BMP = f"{SD_MOUNT_POINT}/background/phase1.bmp"
-FG_BMP = f"{SD_MOUNT_POINT}/foreground/phase1.bmp"
+CONFIG_FILE = f"{SD_MOUNT_POINT}/config.json"
 
+log.info("Initializing hardware resources")
 resources = resources_singleton.get_resources()
 display = resources.get_display()
+touchscreen = resources.get_touchscreen()
+
+log.info("Loading WiFi config from %s", CONFIG_FILE)
+with open(CONFIG_FILE, "r") as f:
+    config = json.load(f)
+
+log.info("Connecting to WiFi SSID: %s", config["wifi_ssid"])
+wifi.radio.connect(config["wifi_ssid"], config["wifi_password"])
+log.info("WiFi connected, IP: %s", wifi.radio.ipv4_address)
+
+pool = socketpool.SocketPool(wifi.radio)
+background_manager = BackgroundManager(pool)
+
 display_root_group = graphics.root_group_singleton.get_root_group(display)
 
-bg_bitmap, bg_palette = adafruit_imageload.load(
-    BG_BMP,
-    bitmap=displayio.Bitmap,
-    palette=displayio.Palette,
-)
-bg_tg = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
+bg_tg = background_manager.load_background()
 display_root_group.append(bg_tg)
 
-# --- Foreground image centered, with "green screen" made transparent ---
-fg_bitmap, fg_palette = adafruit_imageload.load(
-    FG_BMP,
-    bitmap=displayio.Bitmap,
-    palette=displayio.Palette,
-)
+kv = KVStore()
+dino_animator = DinoAnimator(touchscreen, display_root_group, display, kv)
 
-# Treat pure green (0x00FF00) as transparent. Change this if your key color differs.
-GREEN_KEY = 0x00FF00
-for i in range(len(fg_palette)):
-    if fg_palette[i] == GREEN_KEY:
-        fg_palette.make_transparent(i)
-        break
-
-fg_x = (display.width - fg_bitmap.width) // 2
-fg_y = (display.height - fg_bitmap.height) // 2 + 30
-fg_tg = displayio.TileGrid(fg_bitmap, pixel_shader=fg_palette, x=fg_x, y=fg_y)
-
-# Append after background so it renders in the foreground
-display_root_group.append(fg_tg)
-
+display.auto_refresh = False
+log.info("Setup complete, entering main loop")
 
 while True:
-    pass
+    dino_animator.update()
+    display.refresh()

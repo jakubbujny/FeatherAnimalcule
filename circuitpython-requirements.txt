@@ -3,3 +3,5 @@ adafruit_hx8357
 adafruit_tsc2007
 adafruit_sdcard
 adafruit_imageload
+adafruit_ntp
+adafruit_logging

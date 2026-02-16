@@ -1,7 +1,13 @@
+import argparse
 from PIL import Image
 
-in_path = "image.png"
-out_path = "image.bmp"
+parser = argparse.ArgumentParser(description="Convert image to 8-bit BMP with green background for transparency")
+parser.add_argument("input", help="Input image file path")
+parser.add_argument("output", help="Output BMP file path")
+args = parser.parse_args()
+
+in_path = args.input
+out_path = args.output
 
 GREEN = (0, 255, 0, 255)  # RGB 00ff00 + fully opaque alpha
 
