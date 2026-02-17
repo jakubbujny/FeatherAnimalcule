@@ -86,8 +86,7 @@ class DinoAnimator:
             log.debug("Start frame %d/%d", self._frames_played, self._odg.frame_count)
             if self._frames_played >= self._odg.frame_count:
                 self._start_playing_waving()
-            return delay
-
+ł
         if self._state == _STATE_PLAYING_WAVING:
             self._odg.bitmap.fill(0)
             self._odg.next_frame()
